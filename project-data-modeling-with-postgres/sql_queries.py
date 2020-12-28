@@ -108,8 +108,8 @@ INSERT INTO time (
 
 song_select = """
 SELECT songs.song_id, artists.artist_id FROM 
-songs JOIN artists on songs.artist_id=artists.artist_id 
-WHERE artist_name=%s AND title=%s and duration=%s
+songs JOIN artists ON songs.artist_id=artists.artist_id 
+WHERE (songs.title=%s AND artists.artist_name=%s AND duration=%s)
 """
 
 # QUERY LISTS
