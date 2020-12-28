@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS artists (
 
 time_table_create = """
 CREATE TABLE IF NOT EXISTS time (
+    time_id BIGSERIAL PRIMARY KEY,
     start_time TIMESTAMP,
     hour INT,
     day INT,
