@@ -12,10 +12,10 @@ songplay_table_create = """
 CREATE TABLE IF NOT EXISTS songplays (
     songplay_id BIGSERIAL PRIMARY KEY,
     start_time TIMESTAMP,
-    user_id VARCHAR REFERENCES users(user_id),
+    user_id VARCHAR,
     level VARCHAR,
-    song_id VARCHAR REFERENCES songs(song_id),
-    artist_id VARCHAR REFERENCES artists(artist_id),
+    song_id VARCHAR ,
+    artist_id VARCHAR ,
     session_id VARCHAR,
     location VARCHAR,
     user_agent VARCHAR
@@ -36,7 +36,7 @@ song_table_create = """
 CREATE TABLE IF NOT EXISTS songs (
     song_id VARCHAR PRIMARY KEY,
     title VARCHAR,
-    artist_id VARCHAR REFERENCES artists(artist_id),
+    artist_id VARCHAR,
     year INT,
     duration NUMERIC
 )
@@ -85,14 +85,14 @@ song_table_insert = """
 INSERT INTO songs (
     song_id, title, artist_id, year, duration
     ) VALUES (%s, %s, %s, %s, %s) 
-    ON CONFLICT (user_id) DO NOTHING
+    ON CONFLICT (song_id) DO NOTHING
 """
 
 artist_table_insert = """
 INSERT INTO artists (
     artist_id, artist_name, artist_location,
     artist_latitude, artist_longitude) VALUES
-    (%s, %s, %s, %s, %s,) ON CONFLICT (artist_id)
+    (%s, %s, %s, %s, %s) ON CONFLICT (artist_id)
     DO NOTHING
 """
 
@@ -107,6 +107,9 @@ INSERT INTO time (
 # FIND SONGS
 
 song_select = """
+SELECT songs.song_id, artists.artist_id FROM 
+songs JOIN artists on songs.artist_id=artists.artist_id 
+WHERE artist_name=%s AND title=%s and duration=%s
 """
 
 # QUERY LISTS
