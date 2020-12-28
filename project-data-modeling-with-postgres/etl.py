@@ -136,8 +136,7 @@ def process_data(cur, conn, filepath, func):
 
 def main():
     conn = psycopg2.connect(
-        # "host=127.0.0.1 dbname=sparkifydb user=student password=student"
-        "host=127.0.0.1 dbname=sparkifydb user=raghuparedla"
+        "host=127.0.0.1 dbname=sparkifydb user=student password=student"
     )
     cur = conn.cursor()
 
