@@ -9,11 +9,15 @@ def process_song_file(cur, filepath):
 
     # read from json file
     df = pd.read_json(filepath, lines=True)
+    df = df.where(pd.notnull(df), None)
 
     # insert song record
     song_data = df.loc[
         0, ["song_id", "title", "artist_id", "year", "duration"]
     ].to_list()
+
+    # psycopg2 has trouble taking numpy type as input values
+    # convert to native types
     if song_data[3] != None:
         song_data[3] = float(song_data[3])
     if song_data[4] != None:
@@ -41,6 +45,7 @@ def process_song_file(cur, filepath):
 def process_log_file(cur, filepath):
     # open log file
     df = pd.read_json(filepath, lines=True)
+    df = df.where(pd.notnull(df), None)
 
     # filter by NextSong action
     df = df.loc[df["page"] == "NextSong"]
@@ -60,20 +65,31 @@ def process_log_file(cur, filepath):
     ]
 
     for i, row in time_df.iterrows():
-        cur.execute(time_table_insert, list(row))
+        try:
+            cur.execute(time_table_insert, list(row))
+        except psycopg2.Error as e:
+            print("Bad input values")
+            print(e)
 
     # load user table
     user_df = df.loc[:, ["userId", "firstName", "lastName", "gender", "level"]]
 
     # insert user records
     for i, row in user_df.iterrows():
-        cur.execute(user_table_insert, row)
-
+        try:
+            cur.execute(user_table_insert, row)
+        except psycopg2.Error as e:
+            print("Bad input values")
+            print(e)
     # insert songplay records
     for index, row in df.iterrows():
 
         # get songid and artistid from song and artist tables
-        cur.execute(song_select, (row.song, row.artist, float(row.length)))
+        try:
+            cur.execute(song_select, (row.song, row.artist, float(row.length)))
+        except psycopg2.Error as e:
+            print("Bad input values")
+            print(e)
         results = cur.fetchone()
 
         if results:
@@ -92,7 +108,11 @@ def process_log_file(cur, filepath):
             row.location,
             row.userAgent,
         )
-        cur.execute(songplay_table_insert, songplay_data)
+        try:
+            cur.execute(songplay_table_insert, songplay_data)
+        except psycopg2.Error as e:
+            print("Check values to be inserted")
+            print(e)
 
 
 def process_data(cur, conn, filepath, func):

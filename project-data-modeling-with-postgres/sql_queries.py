@@ -12,10 +12,10 @@ songplay_table_create = """
 CREATE TABLE IF NOT EXISTS songplays (
     songplay_id BIGSERIAL PRIMARY KEY,
     start_time TIMESTAMP,
-    user_id VARCHAR,
+    user_id VARCHAR REFERENCES users(user_id),
     level VARCHAR,
-    song_id VARCHAR ,
-    artist_id VARCHAR ,
+    song_id VARCHAR REFERENCES songs(song_id),
+    artist_id VARCHAR REFERENCES artists(artist_id),
     session_id VARCHAR,
     location VARCHAR,
     user_agent VARCHAR
