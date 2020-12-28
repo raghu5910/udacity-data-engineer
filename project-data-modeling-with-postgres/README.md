@@ -16,16 +16,16 @@ Sparkify is a music streaming company. The data of users activity and metadata o
 
 - Popular browsers used by users
 
-  `select user_agent, count(*) from songplays group by user_agent order by user_agent;`
+  `SELECT user_agent, count(*) FROM songplays GROUP BY user_agent ORDER BY user_agent;`
 
 - Most popular songs
 
-  `select song_id, count(*) from songplays group by song_id order by song_id`
+  `SELECT song_id, count(*) FROM songplays GROUP BY song_id ORDER BY song_id`
 
 - Most popular artists
 
-  `select artist_id, count(*) from songplays group by artist_id order by artist_id`
+  `SELECT artist_id, count(*) FROM songplays GROUP BY artist_id ORDER BY artist_id`
 
 - Number of songs listened by non-premium users in single session
 
-  `select count(*) from songplays where level='free' groupby session_id'`
+  `SELECT count(*) FROM songplays WHERE level='free' GROUP BY session_id'`
