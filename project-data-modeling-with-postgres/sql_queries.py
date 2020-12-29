@@ -11,12 +11,12 @@ time_table_drop = "DROP TABLE IF EXISTS time"
 songplay_table_create = """
 CREATE TABLE IF NOT EXISTS songplays (
     songplay_id BIGSERIAL PRIMARY KEY,
-    start_time TIMESTAMP,
-    user_id VARCHAR REFERENCES users(user_id),
-    level VARCHAR,
-    song_id VARCHAR REFERENCES songs(song_id),
-    artist_id VARCHAR REFERENCES artists(artist_id),
-    session_id VARCHAR,
+    start_time TIMESTAMP NOT NULL,
+    user_id VARCHAR NOT NULL REFERENCES users(user_id),
+    level VARCHAR NOT NULL,
+    song_id VARCHAR NOT NULL REFERENCES songs(song_id),
+    artist_id VARCHAR  NOT NULL REFERENCES artists(artist_id),
+    session_id VARCHAR NOT NULL,
     location VARCHAR,
     user_agent VARCHAR
 )
@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
     first_name VARCHAR,
     last_name VARCHAR,
     gender VARCHAR,
-    level VARCHAR
+    level VARCHAR NOT NULL
 )
 """
 
@@ -36,9 +36,9 @@ song_table_create = """
 CREATE TABLE IF NOT EXISTS songs (
     song_id VARCHAR PRIMARY KEY,
     title VARCHAR,
-    artist_id VARCHAR,
-    year INT,
-    duration NUMERIC
+    artist_id VARCHAR NOT NULL,
+    year INT, 
+    duration NUMERIC NOT NULL 
 )
 """
 
@@ -55,13 +55,13 @@ CREATE TABLE IF NOT EXISTS artists (
 time_table_create = """
 CREATE TABLE IF NOT EXISTS time (
     time_id BIGSERIAL PRIMARY KEY,
-    start_time TIMESTAMP,
-    hour INT,
-    day INT,
-    week INT,
-    month INT,
-    year INT,
-    weekday INT
+    start_time TIMESTAMP NOT NULL,
+    hour INT NOT NULL,
+    day INT NOT NULL,
+    week INT NOT NULL,
+    month INT NOT NULL,
+    year INT NOT NULL,
+    weekday INT NOT NULL
 )
 """
 
@@ -79,7 +79,10 @@ user_table_insert = """
 INSERT INTO users (
     user_id, first_name, last_name,
     gender, level) VALUES (%s, %s, %s, %s, %s)
-    ON CONFLICT (user_id) DO NOTHING
+    ON CONFLICT (user_id) DO UPDATE SET
+    (first_name, last_name, gender, level)=
+    (EXCLUDED.first_name, EXCLUDED.last_name,
+    EXCLUDED.gender, EXCLUDED.level)
 """
 
 song_table_insert = """

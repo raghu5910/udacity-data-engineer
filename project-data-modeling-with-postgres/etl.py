@@ -6,6 +6,11 @@ from sql_queries import *
 
 
 def process_song_file(cur, filepath):
+    """
+    - Reads a single json file to a pandas datafram
+    - Preprocesses the data before insertion
+    - Inserts to songs table and artists table
+    """
 
     # read from json file
     df = pd.read_json(filepath, lines=True)
@@ -22,8 +27,10 @@ def process_song_file(cur, filepath):
         song_data[3] = float(song_data[3])
     if song_data[4] != None:
         song_data[4] = float(song_data[4])
-    cur.execute(song_table_insert, song_data)
-
+    try:
+        cur.execute(song_table_insert, song_data)
+    except psycopg2.Error as e:
+        print("Bad input values")
     # insert artist record
     artist_data = df.loc[
         0,
@@ -43,6 +50,14 @@ def process_song_file(cur, filepath):
 
 
 def process_log_file(cur, filepath):
+    """
+    - Read a json file to a pandas dataframe from given filepath
+    - Preprocesses the data before insertion
+    - Extracts datetime fields from given timestamp
+    - Queries song_id and artist_id on songs table and artists table
+        given song title, song duartion and artist's name
+    - Inserts to time table and songplays table
+    """
     # open log file
     df = pd.read_json(filepath, lines=True)
     df = df.where(pd.notnull(df), None)
@@ -69,7 +84,7 @@ def process_log_file(cur, filepath):
             cur.execute(time_table_insert, list(row))
         except psycopg2.Error as e:
             print("Bad input values")
-            print(e)
+            # print(e)
 
     # load user table
     user_df = df.loc[:, ["userId", "firstName", "lastName", "gender", "level"]]
@@ -80,7 +95,7 @@ def process_log_file(cur, filepath):
             cur.execute(user_table_insert, row)
         except psycopg2.Error as e:
             print("Bad input values")
-            print(e)
+            # print(e)
     # insert songplay records
     for index, row in df.iterrows():
 
@@ -89,7 +104,7 @@ def process_log_file(cur, filepath):
             cur.execute(song_select, (row.song, row.artist, float(row.length)))
         except psycopg2.Error as e:
             print("Bad input values")
-            print(e)
+            # print(e)
         results = cur.fetchone()
 
         if results:
@@ -112,10 +127,16 @@ def process_log_file(cur, filepath):
             cur.execute(songplay_table_insert, songplay_data)
         except psycopg2.Error as e:
             print("Check values to be inserted")
-            print(e)
+            # print(e)
 
 
 def process_data(cur, conn, filepath, func):
+    """
+    - creates a list of paths of json files present
+        in a data directory
+    - Iterates over each file and inserts data to
+        corresponding tables
+    """
     # get all files matching extension from directory
     all_files = []
     for root, dirs, files in os.walk(filepath):
@@ -130,16 +151,23 @@ def process_data(cur, conn, filepath, func):
     # iterate over files and process
     for i, datafile in enumerate(all_files, 1):
         func(cur, datafile)
-        conn.commit()
+        # conn.commit()
         print("{}/{} files processed.".format(i, num_files))
 
 
 def main():
+    """
+    - Connects to exisiting sparkify database
+    - Gets a cursor
+    - Processes data from json files in song_data and log_data
+        and inserts into respective tables
+    - Closes connection
+    """
     conn = psycopg2.connect(
         "host=127.0.0.1 dbname=sparkifydb user=student password=student"
     )
     cur = conn.cursor()
-
+    conn.set_session(autocommit=True)
     process_data(cur, conn, filepath="data/song_data", func=process_song_file)
     process_data(cur, conn, filepath="data/log_data", func=process_log_file)
 
