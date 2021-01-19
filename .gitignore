@@ -8,7 +8,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 # VSCODE
-.vscode/
+.vscode/settings.json
 # C extensions
 *.so
 # JSON files
