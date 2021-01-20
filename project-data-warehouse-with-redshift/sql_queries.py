@@ -27,13 +27,14 @@ CREATE TABLE IF NOT EXISTS events_stage (
     auth VARCHAR,
     first_name VARCHAR,
     gender VARCHAR,
-    last_name VARCHAR,
     item_in_session INT,
+    last_name VARCHAR,
     length NUMERIC,
     level VARCHAR,
     location VARCHAR,
     method VARCHAR,
     page VARCHAR,
+    registration VARCHAR,
     session_id INT,
     song_title VARCHAR,
     status INT,
@@ -44,16 +45,16 @@ CREATE TABLE IF NOT EXISTS events_stage (
 
 staging_songs_table_create = """
 CREATE TABLE IF NOT EXISTS songs_stage (
+    song_id VARCHAR,
     num_songs INT,
-    artist_id VARCHAR NOT NULL DISTKEY,
-    artist_latitude NUMERIC,
-    artist_longitude NUMERIC,
-    artist_location VARCHAR,
-    artist_name VARCHAR,
-    song_id VARCHAR PRIMARY KEY,
     song_title VARCHAR,
+    artist_name VARCHAR,
+    artist_latitude NUMERIC,
+    year INT,
     duration NUMERIC,
-    year INT SORTKEY
+    artist_id VARCHAR NOT NULL DISTKEY,
+    artist_longitude NUMERIC,
+    artist_location VARCHAR
 )
 """
 
@@ -85,7 +86,7 @@ song_table_create = """
 CREATE TABLE IF NOT EXISTS songs (
     song_id VARCHAR PRIMARY KEY SORTKEY,
     title VARCHAR,
-    artist_id VARCHAR NOT NULL ,
+    artist_id VARCHAR NOT NULL REFERNCES artists(artistt_id),
     year INT, 
     duration NUMERIC NOT NULL 
 ) DISTSTYLE ALL
@@ -120,8 +121,10 @@ staging_events_copy = (
     """
 COPY events_stage FROM {}
 CREDENTIALS 'aws_iam_role={}'
-FORMAT AS JSON {}
-REGION 'us-west-2';
+COMPUPDATE OFF region 'us-west-2'
+TIMEFORMAT as 'epochmillisecs'
+TRUNCATECOLUMNS BLANKSASNULL EMPTYASNULL
+FORMAT AS JSON {};
 """
 ).format(LOG_DATA, ARN, LOG_JSONPATH)
 
@@ -129,8 +132,9 @@ staging_songs_copy = (
     """
 COPY songs_stage FROM {}
 CREDENTIALS 'aws_iam_role={}'
-FORMAT AS JSON 'auto'
-REGION 'us-west-2';
+COMPUPDATE OFF region 'us-west-2'
+FORMAT AS JSON 'auto' 
+TRUNCATECOLUMNS BLANKSASNULL EMPTYASNULL;
 """
 ).format(SONG_DATA, ARN)
 
@@ -149,7 +153,7 @@ SELECT  es.ts AS start_time,
         es.user_agent AS user_agent
 FROM events_stage AS es
 JOIN songs_stage AS ss
-    ON (es.artist = ss.artist_name)
+    ON (es.artist_name = ss.artist_name)
 WHERE es.page = 'NextSong';
 """
 
@@ -158,19 +162,19 @@ INSERT INTO users (user_id,first_name, gender,
                     last_name, level)
 SELECT DISTINCT user_id, first_name, gender,
                 last_name, level
-FROM events_stage;
+FROM events_stage WHERE user_id IS NOT NULL;
 """
 
 song_table_insert = """
 INSERT INTO songs (song_id, title, artist_id, year, duration)
-SELECT DISTINCT song_id, title, artist_id, year, duration
+SELECT DISTINCT song_id, song_title, artist_id, year, duration
 FROM songs_stage
 """
 
 artist_table_insert = """
 INSERT INTO artists (artist_id, artist_name, artist_location,
                     artist_latitude, artist_longitude)
-SELECT artist_id, artist_name, artist_location, 
+SELECT DISTINCT artist_id, artist_name, artist_location, 
         artist_latitude, artist_longitude
 FROM songs_stage
 """
@@ -179,13 +183,13 @@ time_table_insert = """
 INSERT INTO time (start_time, hour, day, week,
                     month, year, weekday)
 SELECT  start_time,
-        DATE_TRUNC('h',start_time),
-        DATE_TRUNC('doy',start_time),
-        DATE_TRUNC('w',start_time),
-        DATE_TRUNC('mon',start_time),
-        DATE_TRUNC('y',start_time),
-        DATE_TRUNC('dow',start_time),
-FROM songplays
+    EXTRACT(hour FROM start_time)    AS hour,
+    EXTRACT(day FROM start_time)     AS day,
+    EXTRACT(week FROM start_time)    AS week,
+    EXTRACT(month FROM start_time)   AS month,
+    EXTRACT(year FROM start_time)    AS year,
+    EXTRACT(week FROM start_time)    AS weekday
+FROM songplays;
 """
 
 # QUERY LISTS
@@ -210,9 +214,9 @@ drop_table_queries = [
 ]
 copy_table_queries = [staging_events_copy, staging_songs_copy]
 insert_table_queries = [
-    songplay_table_insert,
     user_table_insert,
-    song_table_insert,
     artist_table_insert,
+    song_table_insert,
+    songplay_table_insert,
     time_table_insert,
 ]
