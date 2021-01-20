@@ -86,9 +86,9 @@ song_table_create = """
 CREATE TABLE IF NOT EXISTS songs (
     song_id VARCHAR PRIMARY KEY SORTKEY,
     title VARCHAR,
-    artist_id VARCHAR NOT NULL REFERNCES artists(artistt_id),
+    artist_id VARCHAR NOT NULL REFERENCES artists(artist_id),
     year INT, 
-    duration NUMERIC NOT NULL 
+    duration NUMERIC NOT NULL
 ) DISTSTYLE ALL
 """
 
