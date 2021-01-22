@@ -5,17 +5,27 @@ Sparkify is a music streaming company. The data of users activity and metadata o
 ### Schema
 
 Since our final goal is to analyze songplays, we chose schema based on **star-schema** and our schema achieves upto 2NF.
+When creating tables in Redshift, an important step is to choose good `DISTKEY` and `SORTKEY` and a `DISTSTYLE` for each table (or Wherever it is necessary). We can also add additional constraints for each column, Redshift does not emphasize much on things like Referential Integrity (`Foreign Key`) and NOT NULL constraints. But these keys help query optimizer to choose a better query plan.
 
 #### Facts Table
 
 1.  songplays
+    - `user_id` - SORTKEY, DISTKEY
 
 #### Dimension tables
 
 1.  artists
+    - `artist_id` - `SORTKEY`
+    - `DISTSTYLE ALL`
 2.  songs
+    - `song_id` - `SORTKEY`
+    - `DISTSTYLE ALL`
 3.  users
+    - `user_id` - `SORTKEY`
+    - `DISTSTYLE ALL`
 4.  time
+    - `start_time` - `SORTKEY`
+    - `DISTSTYLE ALL`
 
 #### Staging tables
 
