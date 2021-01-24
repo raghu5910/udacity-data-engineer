@@ -23,7 +23,7 @@ def create_spark_session():
 
 def process_song_data(spark, input_data, output_data):
     # get filepath to song data file
-    song_data = 
+    song_data = input_data + "song_data"
     
     # read song data file
     df = 
@@ -43,10 +43,10 @@ def process_song_data(spark, input_data, output_data):
 
 def process_log_data(spark, input_data, output_data):
     # get filepath to log data file
-    log_data =
+    log_data = input_data+"event_data"
 
     # read log data file
-    df = 
+    df = spark.read   
     
     # filter by actions for song plays
     df = 
@@ -84,7 +84,7 @@ def process_log_data(spark, input_data, output_data):
 def main():
     spark = create_spark_session()
     input_data = "s3a://udacity-dend/"
-    output_data = ""
+    output_data = "s3://my-bucket-for-gdrive/"
     
     process_song_data(spark, input_data, output_data)    
     process_log_data(spark, input_data, output_data)
