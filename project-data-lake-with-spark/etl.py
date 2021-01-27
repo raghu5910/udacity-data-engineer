@@ -42,26 +42,24 @@ def process_song_data(spark, input_data, output_data):
             StructField("duration", FloatType()),
             StructField("song_id", StringType()),
             StructField("title", StringType()),
-            StructField("year", IntegerType),
+            StructField("year", IntegerType()),
         ]
     )
     df = spark.read.format(".json").option("path", song_data).schema(song_schema).load()
 
-    df.createOrreplaceTempView("songs_stage")
+    df.createOrReplaceTempView("songs_stage")
     # extract columns to create songs table
     songs_table = spark.sql(
-        """SELECT DISTINCT song_id, song_title, artist_id, year, duration
+        """SELECT DISTINCT song_id, title, artist_id, year, duration
 FROM songs_stage
     """
     )
 
     # write songs table to parquet files partitioned by year and artist
-    songs_table = (
-        songs_table.format("parquet")
-        .partitionBy("year", "artist_id")
-        .mode("overwrite")
-        .save("s3://mybucket-for-gdrive/songs_table.parquet")
-    )
+
+    songs_table.write.format("parquet").partitionBy("year", "artist_id").option(
+        "path", f"{output_data}/sparkify/songs_table.parquet"
+    ).mode("overwrite").save()
 
     # extract columns to create artists table
     artists_table = spark.sql(
@@ -72,9 +70,10 @@ FROM songs_stage
 
     # write artists table to parquet files
     artists_table = (
-        artists_table.format("parquet")
+        artists_table.write.format("parquet")
+        .option("path", f"{output_data}sparkify/artists_table.parquet")
         .mode("overwrite")
-        .save("s3://mybucket-for-gdrive/artists_table.parquet")
+        .save()
     )
 
 
@@ -119,14 +118,14 @@ def process_log_data(spark, input_data, output_data):
     # extract columns for users table
     users_table = spark.sql(
         """
-    SELECT DISTINCT user_id, first_name, gender,
-                last_name, level
+    SELECT DISTINCT user_id, firstName, gender,
+                lastName, level
 FROM events_stage WHERE user_id IS NOT NULL"""
     )
 
     # write users table to parquet files
-    users_table.format("parquet").mode("overwrite").option(
-        "path", "s3://mybucket-for-gdrive/users_table.parquet"
+    users_table.write.format("parquet").mode("overwrite").option(
+        "path", f"{output_data}/sparkify/users_table.parquet"
     ).save()
 
     # create timestamp column from original timestamp column
@@ -155,12 +154,12 @@ FROM events_stage WHERE user_id IS NOT NULL"""
 
     # write time table to parquet files partitioned by year and month
     time_table.format("parquet").partitionBy("year", "month").mode("overwrite").option(
-        "path", "s3://mybucket-for-gdrive/time_table.parquet"
+        "path", f"{output_data}/sparkify/time_table.parquet"
     ).save()
     # read in song data to use for songplays table
     song_df = (
         spark.read.format("parquet")
-        .option("path", "s3://mybucket-for-gdrive/songs_table")
+        .option("path", f"{output_data}/sparkify/songs_table.parquet")
         .option("inferSchema", "true")
         .load()
     )
@@ -189,8 +188,8 @@ FROM events_stage WHERE user_id IS NOT NULL"""
 
 def main():
     spark = create_spark_session()
-    input_data = "s3a://udacity-dend/"
-    output_data = "s3://my-bucket-for-gdrive/"
+    input_data = "s3://udacity-dend/"
+    output_data = "s3://mybucket-for-gdrive/"
 
     process_song_data(spark, input_data, output_data)
     process_log_data(spark, input_data, output_data)
