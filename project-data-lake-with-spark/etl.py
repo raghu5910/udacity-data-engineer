@@ -3,7 +3,15 @@ import datetime as dt
 import os
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf, col
-from pyspark.sql.functions import year, month, dayofmonth, hour, weekofyear, date_format
+from pyspark.sql.functions import (
+    year,
+    month,
+    hour,
+    dayofmonth,
+    dayofweek,
+    weekofyear,
+    date_format,
+)
 from pyspark.sql.types import (
     StructField,
     StructType,
@@ -12,6 +20,8 @@ from pyspark.sql.types import (
     IntegerType,
     TimestampType,
 )
+from pyspark.sql.functions import to_timestamp
+
 
 config = configparser.ConfigParser()
 config.read("dl_template.cfg")
@@ -98,11 +108,12 @@ def process_log_data(spark, input_data, output_data):
             StructField("sessionId", IntegerType()),
             StructField("song", StringType()),
             StructField("status", IntegerType()),
-            StructField("ts", TimestampType()),
+            StructField("ts", StringType()),
             StructField("userAgent", StringType()),
             StructField("userId", IntegerType()),
         ]
     )
+
     # read log data file
     df = (
         spark.read.format("json")
@@ -111,55 +122,54 @@ def process_log_data(spark, input_data, output_data):
         .option("path", log_data)
         .load()
     )
-    df.createOrreplaceTempView("events_stage")
+    get_timestamp = udf(
+        lambda x: dt.datetime.utcfromtimestamp(int(x) / 1000), TimestampType()
+    )
+    df = df.withColumn("ts", get_timestamp("ts"))
+    df.createOrReplaceTempView("events_stage")
     # filter by actions for song plays
-    df = spark.sql("select * from event_stage where page='NextSong'")
+    df = spark.sql("select * from events_stage where page='NextSong'")
 
     # extract columns for users table
     users_table = spark.sql(
         """
-    SELECT DISTINCT user_id, firstName, gender,
+    SELECT DISTINCT userId, firstName, gender,
                 lastName, level
-FROM events_stage WHERE user_id IS NOT NULL"""
+FROM events_stage WHERE userId IS NOT NULL"""
     )
 
     # write users table to parquet files
     users_table.write.format("parquet").mode("overwrite").option(
-        "path", f"{output_data}/sparkify/users_table.parquet"
+        "path", f"{output_data}/users_table.parquet"
     ).save()
 
     # create timestamp column from original timestamp column
-    # get_timestamp = udf()
-    get_hour = udf(lambda x: int(dt.datetime(x).hour), IntegerType())
-    get_day = udf(lambda x: int(dt.datetime(x).day), IntegerType())
-    get_week = udf(lambda x: int(dt.datetime(x).week), IntegerType())
-    get_weekday = udf(lambda x: int(dt.datetime(x).weekday), IntegerType())
-    get_month = udf(lambda x: int(dt.datetime(x).month), IntegerType())
-    get_year = udf(lambda x: int(dt.datetime(x).year), IntegerType())
-    df = df.withColumn("hour", get_hour(df["ts"]))
-    df = df.withColumn("day", get_day(df["ts"]))
-    df = df.withColumn("week", get_week(df["ts"]))
-    df = df.withColumn("weekday", get_weekday(df["ts"]))
-    df = df.withColumn("month", get_month(df["ts"]))
-    df = df.withColumn("year", get_year(df["ts"]))
+
+    df = df.withColumn("hour", hour("ts"))
+    df = df.withColumn("day", dayofmonth("ts"))
+    df = df.withColumn("week", weekofyear("ts"))
+    df = df.withColumn("weekday", dayofweek("ts"))
+    df = df.withColumn("month", month("ts"))
+    df = df.withColumn("year", year("ts"))
     df = df.withColumnRenamed("ts", "start_time")
 
+    df.createOrReplaceTempView("events_stage")
     # extract columns to create time table
     time_table = spark.sql(
         """
-    SELECT ts, hour, day, week, month, year, weekday
+    SELECT start_time, hour, day, week, month, year, weekday
     FROM events_stage
     """
     )
 
     # write time table to parquet files partitioned by year and month
-    time_table.format("parquet").partitionBy("year", "month").mode("overwrite").option(
-        "path", f"{output_data}/sparkify/time_table.parquet"
-    ).save()
+    time_table.write.format("parquet").partitionBy("year", "month").mode(
+        "overwrite"
+    ).option("path", f"{output_data}/time_table.parquet").save()
     # read in song data to use for songplays table
     song_df = (
         spark.read.format("parquet")
-        .option("path", f"{output_data}/sparkify/songs_table.parquet")
+        .option("path", f"{output_data}/songs_table.parquet")
         .option("inferSchema", "true")
         .load()
     )
@@ -169,7 +179,7 @@ FROM events_stage WHERE user_id IS NOT NULL"""
     songplays_table = spark.sql(
         """
     SELECT  es.ts AS start_time,
-        es.user_id AS user_id,
+        es.userId AS user_id,
         es.level AS level,
         ss.song_id AS song_id,
         ss.artist_id AS artist_id,
