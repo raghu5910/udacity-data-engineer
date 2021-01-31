@@ -35,7 +35,7 @@ def process_song_data(spark, input_data, output_data):
     song_schema = StructType(
         [
             StructField("artist_id", StringType()),
-            StructField("artist_latitutde", FloatType()),
+            StructField("artist_latitude", FloatType()),
             StructField("artist_longitude", FloatType()),
             StructField("artist_location", StringType()),
             StructField("artist_name", StringType()),
@@ -45,7 +45,7 @@ def process_song_data(spark, input_data, output_data):
             StructField("year", IntegerType()),
         ]
     )
-    df = spark.read.format(".json").option("path", song_data).schema(song_schema).load()
+    df = spark.read.format("json").option("path", song_data).schema(song_schema).load()
 
     df.createOrReplaceTempView("songs_stage")
     # extract columns to create songs table
@@ -58,20 +58,20 @@ FROM songs_stage
     # write songs table to parquet files partitioned by year and artist
 
     songs_table.write.format("parquet").partitionBy("year", "artist_id").option(
-        "path", f"{output_data}/sparkify/songs_table.parquet"
+        "path", f"{output_data}/songs_table.parquet"
     ).mode("overwrite").save()
 
     # extract columns to create artists table
     artists_table = spark.sql(
         """SELECT DISTINCT artist_id, artist_name, artist_location, 
-        artist_latitude, artist_longitude
+        artist_latitude, artist_longitude FROM songs_stage
     """
     )
 
     # write artists table to parquet files
     artists_table = (
         artists_table.write.format("parquet")
-        .option("path", f"{output_data}sparkify/artists_table.parquet")
+        .option("path", f"{output_data}/artists_table.parquet")
         .mode("overwrite")
         .save()
     )
@@ -189,7 +189,7 @@ FROM events_stage WHERE user_id IS NOT NULL"""
 def main():
     spark = create_spark_session()
     input_data = "s3://udacity-dend/"
-    output_data = "s3://mybucket-for-gdrive/"
+    output_data = "s3://mybucket-for-gdrive/sparkify-dev"
 
     process_song_data(spark, input_data, output_data)
     process_log_data(spark, input_data, output_data)
