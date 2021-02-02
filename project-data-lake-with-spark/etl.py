@@ -37,10 +37,8 @@ def create_spark_session():
 
 
 def process_song_data(spark, input_data, output_data):
-    # get filepath to song data file
     song_data = input_data + "song_data/*/*/*/*"
 
-    # read song data file
     song_schema = StructType(
         [
             StructField("artist_id", StringType()),
@@ -57,27 +55,22 @@ def process_song_data(spark, input_data, output_data):
     df = spark.read.format("json").option("path", song_data).schema(song_schema).load()
 
     df.createOrReplaceTempView("songs_stage")
-    # extract columns to create songs table
     songs_table = spark.sql(
         """SELECT DISTINCT song_id, title, artist_id, year, duration
 FROM songs_stage
     """
     )
 
-    # write songs table to parquet files partitioned by year and artist
-
     songs_table.write.format("parquet").partitionBy("year", "artist_id").option(
         "path", f"{output_data}/songs_table.parquet"
     ).mode("overwrite").save()
 
-    # extract columns to create artists table
     artists_table = spark.sql(
         """SELECT DISTINCT artist_id, artist_name, artist_location, 
         artist_latitude, artist_longitude FROM songs_stage
     """
     )
 
-    # write artists table to parquet files
     artists_table = (
         artists_table.write.format("parquet")
         .option("path", f"{output_data}/artists_table.parquet")
@@ -87,7 +80,6 @@ FROM songs_stage
 
 
 def process_log_data(spark, input_data, output_data):
-    # get filepath to log data file
     log_data = input_data + "log_data/*/*/*"
 
     event_schema = StructType(
@@ -113,7 +105,6 @@ def process_log_data(spark, input_data, output_data):
         ]
     )
 
-    # read log data file
     df = (
         spark.read.format("json")
         .option("mode", "PERMISSIVE")
@@ -126,10 +117,8 @@ def process_log_data(spark, input_data, output_data):
     )
     df = df.withColumn("ts", get_timestamp("ts"))
     df.createOrReplaceTempView("events_stage")
-    # filter by actions for song plays
     df = spark.sql("select * from events_stage where page='NextSong'")
 
-    # extract columns for users table
     users_table = spark.sql(
         """
     SELECT DISTINCT userId, firstName, gender,
@@ -137,12 +126,9 @@ def process_log_data(spark, input_data, output_data):
 FROM events_stage WHERE userId IS NOT NULL"""
     )
 
-    # write users table to parquet files
     users_table.write.format("parquet").mode("overwrite").option(
         "path", f"{output_data}/users_table.parquet"
     ).save()
-
-    # create timestamp column from original timestamp column
 
     df = df.withColumn("hour", hour("ts"))
     df = df.withColumn("day", dayofmonth("ts"))
@@ -153,7 +139,6 @@ FROM events_stage WHERE userId IS NOT NULL"""
     df = df.withColumnRenamed("ts", "start_time")
 
     df.createOrReplaceTempView("events_stage")
-    # extract columns to create time table
     time_table = spark.sql(
         """
     SELECT start_time, hour, day, week, month, year, weekday
@@ -161,11 +146,9 @@ FROM events_stage WHERE userId IS NOT NULL"""
     """
     )
 
-    # write time table to parquet files partitioned by year and month
     time_table.write.format("parquet").partitionBy("year", "month").mode(
         "overwrite"
     ).option("path", f"{output_data}/time_table.parquet").save()
-    # read in song data to use for songplays table
     song_df = (
         spark.read.format("parquet")
         .option("path", f"{output_data}/songs_table.parquet")
@@ -174,7 +157,6 @@ FROM events_stage WHERE userId IS NOT NULL"""
     )
     song_df.createOrReplaceTempView("songs_stage")
 
-    # extract columns from joined song and log datasets to create songplays table
     songplays_table = spark.sql(
         """
         SELECT es.start_time,
@@ -191,7 +173,6 @@ FROM events_stage WHERE userId IS NOT NULL"""
         """
     )
 
-    # write songplays table to parquet files partitioned by year and month
     songplays_table.write.format("parquet").option(
         "path", f"{output_data}/songplays_table.parquet"
     ).save()
