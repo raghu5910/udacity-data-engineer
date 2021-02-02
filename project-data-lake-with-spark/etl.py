@@ -20,7 +20,6 @@ from pyspark.sql.types import (
     IntegerType,
     TimestampType,
 )
-from pyspark.sql.functions import to_timestamp
 
 
 config = configparser.ConfigParser()
@@ -173,27 +172,29 @@ FROM events_stage WHERE userId IS NOT NULL"""
         .option("inferSchema", "true")
         .load()
     )
-    song_df.createOrreplaceTempView("songs_stage")
+    song_df.createOrReplaceTempView("songs_stage")
 
     # extract columns from joined song and log datasets to create songplays table
     songplays_table = spark.sql(
         """
-    SELECT  es.ts AS start_time,
+        SELECT es.start_time,
         es.userId AS user_id,
         es.level AS level,
         ss.song_id AS song_id,
         ss.artist_id AS artist_id,
-        es.session_id AS session_id,
+        es.sessionId AS session_id, 
         es.location AS location,
         es.userAgent AS user_agent
         FROM events_stage AS es
         JOIN songs_stage AS ss
-            ON (es.artist_name = ss.artist_name)
+            ON (es.song = ss.title)
         """
     )
 
     # write songplays table to parquet files partitioned by year and month
-    songplays_table
+    songplays_table.write.format("parquet").option(
+        "path", f"{output_data}/songplays_table.parquet"
+    ).save()
 
 
 def main():
