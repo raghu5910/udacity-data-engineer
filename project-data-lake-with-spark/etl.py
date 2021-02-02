@@ -186,7 +186,7 @@ FROM events_stage WHERE userId IS NOT NULL"""
         """
     )
 
-    songplays_table.write.format("parquet").option(
+    songplays_table.write.format("parquet").partitionBy("year", "month").option(
         "path", f"{output_data}/songplays_table.parquet"
     ).save()
 
