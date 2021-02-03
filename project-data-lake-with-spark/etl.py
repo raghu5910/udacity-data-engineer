@@ -70,7 +70,7 @@ FROM songs_stage
     )
 
     songs_table.write.format("parquet").partitionBy("year", "artist_id").option(
-        "path", f"{output_data}/songs_table.parquet"
+        "path", f"{output_data}/songs_table/songs.parquet"
     ).mode("overwrite").save()
 
     artists_table = spark.sql(
@@ -81,7 +81,7 @@ FROM songs_stage
 
     artists_table = (
         artists_table.write.format("parquet")
-        .option("path", f"{output_data}/artists_table.parquet")
+        .option("path", f"{output_data}/artists_table/artists.parquet")
         .mode("overwrite")
         .save()
     )
@@ -140,7 +140,7 @@ FROM events_stage WHERE userId IS NOT NULL"""
     )
 
     users_table.write.format("parquet").mode("overwrite").option(
-        "path", f"{output_data}/users_table.parquet"
+        "path", f"{output_data}/users_table/users.parquet"
     ).save()
 
     df = df.withColumn("hour", hour("ts"))
@@ -161,10 +161,10 @@ FROM events_stage WHERE userId IS NOT NULL"""
 
     time_table.write.format("parquet").partitionBy("year", "month").mode(
         "overwrite"
-    ).option("path", f"{output_data}/time_table.parquet").save()
+    ).option("path", f"{output_data}/time_table/time.parquet").save()
     song_df = (
         spark.read.format("parquet")
-        .option("path", f"{output_data}/songs_table.parquet")
+        .option("path", f"{output_data}/songs/songs_table.parquet")
         .option("inferSchema", "true")
         .load()
     )
@@ -185,9 +185,11 @@ FROM events_stage WHERE userId IS NOT NULL"""
             ON (es.song = ss.title)
         """
     )
+    songplays_table.withColumn("year", year("start_time"))
+    songplays_table.withColumn("month", month("start_time"))
 
     songplays_table.write.format("parquet").partitionBy("year", "month").option(
-        "path", f"{output_data}/songplays_table.parquet"
+        "path", f"{output_data}/songplays_table/songplays.parquet"
     ).save()
 
 

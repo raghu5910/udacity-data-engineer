@@ -11,15 +11,15 @@ Data Lake is not a replacement for Data Warehouse but it is an extension of the 
 - Allows us to cater the needs of different people. (Business Analyts, Data Analysts, Machine Learning Engineers etc .,.)
 - Scalable.
 
-### Project workflow
+## Project workflow
 
 Sparkify is a music streaming company. The data of users activity and metadata of songs is stored in json files. In this project, our goal is to transform this data into dimension tables and fact tables based our business analysis requirement and store them as files in a Data Lake. We do this by first ingesting data from S3 source and then we do a series of transformations, after which we save the result in a Data Lake.
 
-## Data Ingestion
+### Data Ingestion
 
 We ingest data from a S3 bucket `s3://udacity-dend`. The Objects `log_data` and `event_data` contains several files in JSON format which need to be transformed to achieve our goal.
 
-## Processing
+### Processing
 
 After ingesting data from S3 bucket, we do series of tranformations over our intial data, to get desired facts and dimension tables.
 
@@ -34,9 +34,23 @@ After ingesting data from S3 bucket, we do series of tranformations over our int
 3.  users
 4.  time
 
-## Storing
+### Storing
 
 We sink our fact tables and Dimensional table into our Data Lake in parquet format. Before writing, we partition our data based upon specific columns to make reads and queries easier in future.
+
+### How to run
+
+The easiest way of getting started with this project is with AWS EMR's spark cluster.
+
+- Make sure that python3.6 or above is being using by pyspark. If your pyspark is using python2, then execute this command `export PYSPARK_PYTHON=python3` before starting a pyspark session.
+
+- Also to write to your private S3 bucket, configure your credentials in `dl.cfg` file.
+
+To run `etl.py` with spark cluster execute the following command
+
+```
+spark-submit --deploy-mode cluster --master yarn etl.py
+```
 
 ### Credits
 
