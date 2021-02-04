@@ -164,7 +164,7 @@ FROM events_stage WHERE userId IS NOT NULL"""
     ).option("path", f"{output_data}/time_table/time.parquet").save()
     song_df = (
         spark.read.format("parquet")
-        .option("path", f"{output_data}/songs/songs_table.parquet")
+        .option("path", f"{output_data}/songs_table/songs.parquet")
         .option("inferSchema", "true")
         .load()
     )
