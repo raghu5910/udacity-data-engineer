@@ -185,8 +185,8 @@ FROM events_stage WHERE userId IS NOT NULL"""
             ON (es.song = ss.title)
         """
     )
-    songplays_table.withColumn("year", year("start_time"))
-    songplays_table.withColumn("month", month("start_time"))
+    songplays_table = songplays_table.withColumn("year", year("start_time"))
+    songplays_table = songplays_table.withColumn("month", month("start_time"))
 
     songplays_table.write.format("parquet").partitionBy("year", "month").option(
         "path", f"{output_data}/songplays_table/songplays.parquet"
